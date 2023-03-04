@@ -21,7 +21,12 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 from PIL import Image, ImageFilter
 import plotly.express as px
+import warnings
+import altair as alt
 
+
+#Disable warnings 
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Set wide view
 st.set_page_config(layout="wide")
@@ -242,6 +247,97 @@ def plot_horizontal_bar(x, y, xlabel, ylabel, title, color='r', figsize=(10,6), 
     st.pyplot()
 
 
+# Muldimentional plot
+def create_figure(x_axis, y_axis, group_by):
+    chart_data = df_train[[x_axis, y_axis, group_by]].groupby([group_by, x_axis]).mean().reset_index()
+    chart = alt.Chart(chart_data).mark_line().encode(
+        x=x_axis,
+        y=alt.Y(y_axis, axis=alt.Axis(title='Sale Price in dollars')),
+        color=group_by
+    ).properties(width=600, height=400)
+    return chart
+
+# Data Selection
+def convert_to_categorical(df):
+    int_obj = ['YrSold','MoSold','YearBuilt','YearRemodAdd','OverallQual','OverallCond','BsmtFullBath','BsmtHalfBath','GarageYrBlt','MSSubClass']
+    for val in int_obj:
+        df[val] = df[val].astype('object')
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    df1 = df[categorical_cols]
+    df2 = df[['SalePrice']]
+    data = pd.concat([df1, df2], axis=1)
+    return data
+data = convert_to_categorical(df_train)
+
+data_num = df_train[['1stFlrSF','2ndFlrSF','GarageArea','GrLivArea','TotalBsmtSF','MasVnrArea','SalePrice']]
+
+# Define the mapping between custom names and variable names
+var_dict2 = {
+    "The building class": "MSSubClass",
+    "The general zoning classification": "MSZoning",
+    "Type of road access": "Street",
+    "Type of alley access": "Alley",
+    "General shape of property": "LotShape",
+    "Flatness of the property": "LandContour",
+    "Type of utilities available": "Utilities",
+    "Lot configuration": "LotConfig",
+    "Slope of property": "LandSlope",
+    "Physical locations within Ames city limits": "Neighborhood",
+    "Proximity to main road or railroad": "Condition1",
+    "Proximity to main road or railroad": "Condition2",
+    "Type of dwelling": "BldgType",
+    "Style of dwelling": "HouseStyle",
+    "Overall material and finish quality": "OverallQual",
+    "Overall condition rating": "OverallCond",
+    "Original construction date": "YearBuilt",
+    "Remodel date": "YearRemodAdd",
+    "Type of roof": "RoofStyle",
+    "Roof material": "RoofMatl",
+    "Exterior covering on house": "Exterior1st",
+    "Exterior covering on house": "Exterior2nd",
+    "Masonry veneer type": "MasVnrType",
+    "Exterior material quality": "ExterQual",
+    "Present condition of the material on the exterior": "ExterCond",
+    "Type of foundation": "Foundation",
+    "Height of the basement": "BsmtQual",
+    "General condition of the basement": "BsmtCond",
+    "Walkout or garden level basement walls": "BsmtExposure",
+    "Quality of basement finished area": "BsmtFinType1",
+    "Quality of second finished area": "BsmtFinType2",
+    "Type of heating": "Heating",
+    "Heating quality and condition": "HeatingQC",
+    "Central air conditioning": "CentralAir",
+    "Electrical system": "Electrical",
+    "Basement full bathrooms": "BsmtFullBath",
+    "Basement half bathrooms": "BsmtHalfBath",
+    "Kitchen quality": "KitchenQual",
+    "Home functionality rating": "Functional",
+    "Fireplace quality": "FireplaceQu",
+    "Garage location": "GarageType",
+    "Year garage was built": "GarageYrBlt",
+    "Interior Finish of the Garage": "GarageFinish",
+    "Garage Quality": "GarageQual",
+    "Garage Condition": "GarageCond",
+    "Paved Driveway": "PavedDrive",
+    'Pool Quality': 'PoolQC',
+    'Fence Quality': 'Fence',
+    'Miscellaneous Feature not Covered in Other Categories': 'MiscFeature',
+    'Month Sold': 'MoSold',
+    'Year Sold': 'YrSold',
+    'Type of Sale': 'SaleType',
+    'Condition of Sale': 'SaleCondition',
+    "the property's sale price in dollars": "SalePrice"
+}
+var_dict = {
+    'First Floor Area': '1stFlrSF',
+    'Second Floor Area': '2ndFlrSF',
+    'Garage Area': 'GarageArea',
+    'Above Ground Living Area': 'GrLivArea',
+    'Total Basement Area': 'TotalBsmtSF',
+    'Masonry Veneer Area': 'MasVnrArea',
+    'Propertys Sale Price': 'SalePrice'
+}
+
 ####################
 ### INTRODUCTION ###
 ####################
@@ -251,7 +347,7 @@ def home_page():
     blurred_img = img.filter(ImageFilter.GaussianBlur(radius=0))
     # Display the blurred image
     st.image(blurred_img, use_column_width=True)
-
+    st.set_option('deprecation.showPyplotGlobalUse', False)
     option1 = st.sidebar.selectbox(
     'Choose the DATA to visualize',
     ('Train Dataset', 'Test Dataset') 
@@ -262,7 +358,7 @@ def home_page():
     )
     row0_spacer1, row0_1, row0_spacer2, row0_2, row0_spacer3 = st.columns((.1, 2.3, .1, 1.3, .1))
     with row0_1:
-        st.title('PROJECT 5: PREDICTING THE SALE PRICE OF A HOUSE')
+        st.title("PROJECT 5: PREDICTING THE SALE PRICE OF A HOUSE")
     with row0_2:
         st.text("")
         st.subheader('NGOMSEU & DJEUNANG from [Institut Saint Jean](https://institutsaintjean.org/)')
@@ -327,7 +423,38 @@ def home_page():
         
     with row3_1:
         st.text("")
-        st.subheader('Link to data description in kaggle [Click here to get redirected](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data)')
+        st.markdown('Link to data description in kaggle [Click here to get redirected](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data)')
+
+    with row3_1:
+        st.markdown('')
+        st.title("Sales Data Visualization")
+        x_var = st.selectbox("Select x-axis", options=list(var_dict2.keys()))
+        x_axis = var_dict2[x_var]
+        y_axis = st.selectbox("Select y-axis", ['SalePrice'])
+        group_by = st.selectbox("Select grouping variable", ['YrSold', 'MoSold'])
+        if group_by == 'YrSold':
+            fig1 = create_figure(x_axis, y_axis, 'YrSold')
+            st.altair_chart(fig1, use_container_width=True)
+        else:
+            fig2 = create_figure(x_axis, y_axis, 'MoSold')
+            st.altair_chart(fig2, use_container_width=True)
+
+    with row3_1:
+        # Get the list of numerical columns
+        numerical_cols = data_num.select_dtypes(include=['int', 'float']).columns.tolist()
+        st.title("Scatter Plot with Dynamic X-Axis")   
+        # Choose the x-axis variable
+        x_var = st.selectbox("Select X-axis variable", options=list(var_dict.keys()))
+        x_axis = var_dict[x_var] 
+        # Create the scatter plot using Plotly
+        fig = px.scatter(data_num, x=x_axis, y='SalePrice')
+        fig.update_layout(
+        xaxis_title=x_var,
+        yaxis_title='Sale Price in dollars'
+        ) 
+        # Show the scatter plot in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
 
 
 def page1():
@@ -337,6 +464,7 @@ def page1():
     # Display the blurred image
     st.image(blurred_img, use_column_width=True)
     row0_spacer1, row0_1, row0_spacer2, row0_2, row0_spacer3 = st.columns((.001, 20, .01, .3, .1))
+    st.set_option('deprecation.showPyplotGlobalUse', False)
     with row0_1:
         st.title('**EXPLORATORY ANALYSIS FOR HOUSE PREDICTION**')
         st.markdown('')
@@ -469,26 +597,30 @@ def page2():
     blurred_img = img.filter(ImageFilter.GaussianBlur(radius=0))
     # Display the blurred image
     st.image(blurred_img, use_column_width=True)
-
+    st.set_option('deprecation.showPyplotGlobalUse', False)
     # Set page layout
     col1, col2 = st.columns((3, 3))
+    
     with col1:
-        st.image("ISJ.jpeg.", width=500)
+        st.markdown("")
+        st.image("man.png", width=250)
         st.write("## NZEUGANG NGOMSEU")
-        st.write("### Romaric")
-        st.write("Field: " + "Data Science & AI")
-        st.write("Level: " + "Masters 2")
-        st.write("University: INSTITUT SAINT JEAN")
-        st.write("Description: " + "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ")
+        st.write("#### [Romaric](https://www.linkedin.com/in/romaric-ngomseu-910804195/)")
+        st.write("**Field:** " + "Data Science & AI")
+        st.write("**Level**: " + "Masters 2")
+        st.write("**University**: INSTITUT SAINT JEAN")
+        st.write("**Description:** " + "En Master 2 Science des données et intelligence Artificielle")
 
     with col2:
-        st.image("ISJ.jpeg.", width=500)
+        st.markdown("")
+        st.image("woman.png", width=250)
         st.write("## DJEUNANG KENFACK")
-        st.write("### Aude Michèle")
-        st.write("Field: " + "Data Science & AI")
-        st.write("Level: " + "Masters 2")
-        st.write("University: INSTITUT SAINT JEAN")
-        st.write("Description: " + "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ")
+        st.write("#### [Aude Michèle](https://www.linkedin.com/in/aude-mich%C3%A8le-djeunang-kenfack-496a72219/)")
+        st.write("**Field:** " + "Data Science & AI")
+        st.write("**Level:** " + "Masters 2")
+        st.write("**University:** INSTITUT SAINT JEAN")
+        st.write("**Description:** " + "En Master 2 Science des données et intelligence Artificielle")    
+
 
 pages = {
     'Home': home_page,
